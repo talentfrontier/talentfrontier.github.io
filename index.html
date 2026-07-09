@@ -2,17 +2,189 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Lazidential</title>
+<title>Lazidential — Nyumba Made Easy</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Lazidential helps Kenyan landlords and caretakers track rent, follow up arrears with Mali the AI assistant, send receipts automatically and fill vacant houses. First month free.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Crect width='120' height='120' rx='24' fill='%230a3d2e'/%3E%3Cg fill='none' stroke='%2306d6a0' stroke-width='7' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M72 30 L104 62 L104 72 L40 72 L40 62 Z'/%3E%3Cpath d='M44 44 L76 76 L76 86 L12 86 L12 76 Z'/%3E%3C/g%3E%3C/svg%3E">
 <style>
-  body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
-       background:#0a3d2e;color:#eafff8;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;text-align:center;padding:24px}
-  h1{font-size:26px;margin:0}
-  p{color:#9fd4c4;font-size:15px;margin:0;line-height:1.6;max-width:320px}
+  :root{
+    --green:#0a3d2e; --green-soft:#1e6650; --green-deep:#072b20;
+    --lime:#06d6a0; --lime-ink:#063b2c; --cream:#f6f4ee; --ink:#14241d;
+    --mint-soft:#bfe9da; --mint-text:#7fe0c2;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--cream);color:var(--ink);line-height:1.5}
+  .wrap{max-width:1060px;margin:0 auto;padding:0 22px}
+
+  header{background:linear-gradient(140deg,#0d4736,var(--green) 60%,var(--green-deep));color:var(--cream)}
+  nav{display:flex;align-items:center;justify-content:space-between;padding:20px 0}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--cream)}
+  .brand svg{width:44px;height:44px}
+  .brand b{font-size:24px;letter-spacing:-.5px}
+  .brand small{display:block;font-size:10px;letter-spacing:4px;color:var(--mint-text);font-weight:700}
+  .nav-cta{background:var(--lime);color:var(--lime-ink);font-weight:800;text-decoration:none;padding:10px 18px;border-radius:999px;font-size:15px}
+
+  .hero{padding:44px 0 64px;display:grid;grid-template-columns:1.2fr .8fr;gap:36px;align-items:center}
+  .hero h1{font-size:clamp(34px,5.5vw,56px);font-weight:800;line-height:1.08;letter-spacing:-1px}
+  .hero h1 span{color:var(--lime)}
+  .hero p{margin-top:16px;font-size:18px;color:var(--mint-soft);max-width:34em}
+  .cta-row{margin-top:28px;display:flex;gap:14px;flex-wrap:wrap}
+  .btn{display:inline-block;text-decoration:none;font-weight:800;padding:15px 26px;border-radius:14px;font-size:17px}
+  .btn-lime{background:var(--lime);color:var(--lime-ink)}
+  .btn-ghost{border:2px solid rgba(6,214,160,.5);color:var(--cream)}
+  .free-line{margin-top:14px;font-size:14px;color:var(--mint-text);letter-spacing:1px;font-weight:600}
+
+  .phone-mock{background:var(--green-deep);border:2px solid rgba(6,214,160,.25);border-radius:26px;padding:18px;box-shadow:0 24px 60px rgba(0,0,0,.35)}
+  .chat{display:flex;flex-direction:column;gap:10px}
+  .chip{font-size:11px;letter-spacing:3px;color:var(--mint-text);font-weight:700;text-align:center;margin-bottom:4px}
+  .msg{max-width:88%;padding:10px 14px;border-radius:14px;font-size:14.5px;line-height:1.45}
+  .me{align-self:flex-end;background:var(--lime);color:var(--lime-ink);border-bottom-right-radius:4px;font-weight:600}
+  .mali{align-self:flex-start;background:#123f31;color:#eafff8;border-bottom-left-radius:4px;border:1px solid rgba(6,214,160,.25)}
+  .mali b{color:var(--lime)}
+
+  section{padding:64px 0}
+  .kicker{font-size:12px;font-weight:800;letter-spacing:4px;color:#0a7d4f}
+  h2{font-size:clamp(26px,4vw,38px);font-weight:800;color:var(--green);letter-spacing:-.5px;margin-top:6px}
+  .lead{margin-top:10px;font-size:17px;color:#4a5f55;max-width:44em}
+
+  .grid{margin-top:34px;display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  .card{background:#fff;border:2px solid #e2e9e4;border-radius:18px;padding:24px}
+  .card .ic{width:46px;height:46px;border-radius:12px;background:var(--green);color:var(--lime);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800}
+  .card h3{margin-top:14px;font-size:19px;color:var(--green)}
+  .card p{margin-top:8px;font-size:15px;color:#4a5f55}
+
+  .mali-band{background:linear-gradient(140deg,#0d4736,var(--green) 60%,var(--green-deep));color:var(--cream)}
+  .mali-band .lead{color:var(--mint-soft)}
+  .mali-band h2{color:var(--cream)}
+  .mali-band .kicker{color:var(--lime)}
+
+  .plans{margin-top:34px;display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  .plan{background:#fff;border:2px solid #e2e9e4;border-radius:18px;padding:26px;display:flex;flex-direction:column}
+  .plan.best{border-color:var(--lime);box-shadow:0 14px 40px rgba(6,214,160,.18);position:relative}
+  .plan.best::before{content:"MOST POPULAR";position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--lime);color:var(--lime-ink);font-size:11px;font-weight:800;letter-spacing:2px;padding:4px 12px;border-radius:999px}
+  .plan h3{font-size:18px;color:var(--green)}
+  .price{margin-top:10px;font-size:34px;font-weight:800;color:var(--green)}
+  .price small{font-size:14px;color:#4a5f55;font-weight:600}
+  .plan ul{margin:16px 0 22px;list-style:none;flex:1}
+  .plan li{font-size:14.5px;color:#37493f;padding:5px 0 5px 26px;position:relative}
+  .plan li::before{content:"✓";position:absolute;left:0;color:#0a7d4f;font-weight:800}
+  .plan .btn{text-align:center;font-size:15px;padding:12px 0}
+  .trial-note{margin-top:18px;text-align:center;font-size:15px;color:#0a7d4f;font-weight:700}
+
+  footer{background:var(--green-deep);color:var(--mint-soft);padding:52px 0 40px}
+  footer h2{color:var(--cream);font-size:28px}
+  .contacts{margin-top:24px;display:flex;gap:18px;flex-wrap:wrap}
+  .contact-card{background:rgba(6,214,160,.08);border:1px solid rgba(6,214,160,.25);border-radius:16px;padding:20px 26px;min-width:250px}
+  .contact-card b{display:block;color:var(--cream);font-size:19px}
+  .contact-card i{display:block;font-style:normal;font-size:12px;letter-spacing:2px;color:var(--mint-text);margin:4px 0 10px}
+  .contact-card a{color:var(--lime);font-weight:800;font-size:22px;text-decoration:none;letter-spacing:1px}
+  .foot-note{margin-top:34px;font-size:13px;color:#6fa38f;border-top:1px solid rgba(6,214,160,.15);padding-top:18px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+
+  @media(max-width:840px){
+    .hero{grid-template-columns:1fr;padding-bottom:48px}
+    .phone-mock{max-width:420px}
+    .grid,.plans{grid-template-columns:1fr}
+    section{padding:48px 0}
+  }
 </style>
 </head>
 <body>
-<h1>Lazidential 🇰🇪</h1>
-<p>Rental homes and effortless property management for Kenyan landlords and tenants. The app link service for Lazidential runs on this site.</p>
+
+<header>
+  <div class="wrap">
+    <nav>
+      <a class="brand" href="/">
+        <svg viewBox="0 0 120 120"><g fill="none" stroke="#06d6a0" stroke-width="6" stroke-linejoin="round" stroke-linecap="round">
+          <path d="M72 30 L104 62 L104 72 L40 72 L40 62 Z"/><line x1="72" y1="30" x2="72" y2="44"/><rect x="62" y="56" width="13" height="12" rx="1"/>
+          <path d="M44 44 L76 76 L76 86 L12 86 L12 76 Z"/><line x1="44" y1="44" x2="44" y2="58"/><rect x="34" y="70" width="13" height="12" rx="1"/>
+        </g></svg>
+        <span><b>Lazidential</b><small>NYUMBA · MADE EASY</small></span>
+      </a>
+      <a class="nav-cta" href="https://wa.me/254729989389?text=Habari%20Bret%2C%20nimeona%20Lazidential%20%E2%80%94%20I%27d%20like%20the%20app%20%2F%20a%20demo%20%F0%9F%8F%A0">Get the app</a>
+    </nav>
+
+    <div class="hero">
+      <div>
+        <h1>Manage your rentals from your <span>phone</span>.</h1>
+        <p>Lazidential helps Kenyan landlords and caretakers track rent, follow up arrears, send receipts automatically and fill vacant houses — bila stress, bila mahesabu za kichwa.</p>
+        <div class="cta-row">
+          <a class="btn btn-lime" href="https://wa.me/254729989389?text=Habari%20Bret%2C%20nimeona%20Lazidential%20%E2%80%94%20I%27d%20like%20the%20app%20%2F%20a%20demo%20%F0%9F%8F%A0">Get the app on WhatsApp</a>
+          <a class="btn btn-ghost" href="tel:+254729989389">Call 0729 989 389</a>
+        </div>
+        <div class="free-line">FIRST MONTH FREE · FULL ACCESS · NO COMMITMENT</div>
+      </div>
+      <div class="phone-mock">
+        <div class="chat">
+          <div class="chip">MALI · YOUR AI PROPERTY MANAGER</div>
+          <div class="msg me">Nani hajalipa this month?</div>
+          <div class="msg mali">Habari! 👋 Two units are pending for July: <b>A3 — Wanjiku</b> (KSh 8,000) and <b>B1 — Otieno</b> (KSh 12,000, second month). Everyone else has paid. Nikumbushe wapangaji?</div>
+          <div class="msg me">Yes, remind them</div>
+          <div class="msg mali">✅ Done — polite reminders sent to both. I'll tell you the moment they pay.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section id="features">
+  <div class="wrap">
+    <div class="kicker">WHAT IT DOES</div>
+    <h2>Everything a landlord juggles, in one app.</h2>
+    <p class="lead">Built for Kenyan plots and estates — from two units to a whole portfolio.</p>
+    <div class="grid">
+      <div class="card"><div class="ic">KSh</div><h3>Rent tracking, instant</h3><p>See who has paid, who is behind and every arrear — per unit, per tenant, per month. No more scrolling M-Pesa messages.</p></div>
+      <div class="card"><div class="ic">M</div><h3>Mali, your AI assistant</h3><p>Ask in Swahili, Sheng or English — in the app or on Telegram. Mali answers with your real numbers, records payments and reminds tenants.</p></div>
+      <div class="card"><div class="ic">🧾</div><h3>Receipts &amp; reminders</h3><p>Tenants get receipts and rent reminders automatically. Paste an M-Pesa SMS and the payment records itself.</p></div>
+      <div class="card"><div class="ic">🏠</div><h3>Fill vacant houses</h3><p>List a vacancy and tenants browsing nearby find it — with photos, perks and a map. Viewing requests come straight to you.</p></div>
+      <div class="card"><div class="ic">★</div><h3>Tenant reputation</h3><p>Every tenant builds a payment score and on-time streak — so you know who you're renting to before you hand over keys.</p></div>
+      <div class="card"><div class="ic">🔧</div><h3>Repairs &amp; requests</h3><p>Tenants report repairs in the app; you see, prioritise and close them — with a record the whole plot can trust.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="mali-band" id="mali">
+  <div class="wrap">
+    <div class="kicker">MEET MALI</div>
+    <h2>An assistant who knows your plot by heart.</h2>
+    <p class="lead">Mali works inside the app and on Telegram — so you can run your properties from the same place you chat. Ask about arrears, collections, leads or repairs, and get answers from your actual records, in the language you think in.</p>
+  </div>
+</section>
+
+<section id="pricing">
+  <div class="wrap">
+    <div class="kicker">PRICING</div>
+    <h2>Start free. Pay when it's paying for itself.</h2>
+    <p class="lead">A human agent takes 8–10% of your rent every month. Lazidential does the follow-up for a flat fee.</p>
+    <div class="plans">
+      <div class="plan"><h3>Pro</h3><div class="price">KSh 999<small> /month</small></div>
+        <ul><li>Up to 10 units</li><li>Mali AI assistant</li><li>Rent tracking &amp; arrears</li><li>Automatic receipts &amp; reminders</li><li>Insights &amp; statements</li></ul>
+        <a class="btn btn-lime" href="https://wa.me/254729989389?text=Habari%2C%20I%27d%20like%20the%20Pro%20plan%20on%20Lazidential">Start free month</a></div>
+      <div class="plan best"><h3>Portfolio</h3><div class="price">KSh 3,500<small> /month</small></div>
+        <ul><li>Unlimited units &amp; tenants</li><li>Everything in Pro</li><li>Deposits &amp; lease tracking</li><li>Verified fundi directory</li><li>Priority support</li></ul>
+        <a class="btn btn-lime" href="https://wa.me/254729989389?text=Habari%2C%20I%27d%20like%20the%20Portfolio%20plan%20on%20Lazidential">Start free month</a></div>
+      <div class="plan"><h3>Annual</h3><div class="price">KSh 24,000<small> /year</small></div>
+        <ul><li>Everything in Portfolio</li><li>Two months free vs monthly</li><li>One payment, sorted for the year</li></ul>
+        <a class="btn btn-lime" href="https://wa.me/254729989389?text=Habari%2C%20I%27d%20like%20the%20Annual%20plan%20on%20Lazidential">Start free month</a></div>
+    </div>
+    <div class="trial-note">Every account starts with a full month of everything, free — no card, no commitment.</div>
+  </div>
+</section>
+
+<footer id="contact">
+  <div class="wrap">
+    <h2>Talk to us today.</h2>
+    <p style="margin-top:8px;font-size:16px">We'll set you up in minutes — demo ya dakika mbili tu.</p>
+    <div class="contacts">
+      <div class="contact-card"><b>Bret Gitata</b><i>FOUNDER</i><a href="tel:+254729989389">0729 989 389</a></div>
+      <div class="contact-card"><b>Eric Mwangi</b><i>FOUNDING MEMBER</i><a href="tel:+254707788794">0707 788 794</a></div>
+    </div>
+    <div class="foot-note">
+      <span>© 2026 Lazidential · Nairobi, Kenya 🇰🇪</span>
+      <span>Call · SMS · WhatsApp — Mon to Sun</span>
+    </div>
+  </div>
+</footer>
+
 </body>
 </html>
