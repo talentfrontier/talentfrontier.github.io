@@ -1,0 +1,46 @@
+name: Julikana Android APK
+
+# Manually triggered: GitHub → Actions → "Julikana Android APK" → Run workflow.
+# Requires one repo secret: EXPO_TOKEN (create at expo.dev/settings/access-tokens).
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: "EAS build profile (preview = APK, production = .aab)"
+        default: "preview"
+        type: choice
+        options: [preview, production]
+
+jobs:
+  eas-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: julikana/apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: julikana
+
+      - name: Link EAS project (first run creates it under your account)
+        run: eas init --force --non-interactive
+
+      - name: Build APK on EAS
+        run: eas build --platform android --profile ${{ inputs.profile }} --non-interactive --no-wait
+
+      - name: Where to get the APK
+        run: |
+          echo "Build queued on Expo's servers."
+          echo "Download link: https://expo.dev → your account → julikana → Builds"
