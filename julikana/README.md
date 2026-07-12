@@ -23,7 +23,8 @@ julikana/
 │   │       ├── social/       10 platform adapters + publish worker + webhooks
 │   │       ├── workflows/    Event-triggered automation engine
 │   │       ├── campaigns/ content/ media/ analytics/ brand/ billing/ ...
-│   └── web/          Next.js dashboard (Tailwind, dark/light, SVG charts)
+│   ├── web/          Next.js dashboard (Tailwind, dark/light, SVG charts)
+│   └── mobile/       Expo app — Domo chat + dashboard (EAS → APK, see its README)
 ├── packages/shared/  Types shared by both apps
 ├── docker-compose.yml
 └── docs/             Architecture & deployment guides
