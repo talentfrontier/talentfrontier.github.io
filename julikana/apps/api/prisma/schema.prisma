@@ -1,0 +1,584 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Identity & tenancy ────────────────────────────────────────────
+
+model User {
+  id               String       @id @default(cuid())
+  email            String       @unique
+  passwordHash     String? // null for OAuth-only accounts
+  name             String
+  avatarUrl        String?
+  twoFactorSecret  String? // encrypted TOTP secret
+  twoFactorEnabled Boolean      @default(false)
+  oauthProvider    String? // "google" | "microsoft"
+  oauthSubject     String?
+  memberships      Membership[]
+  assignedLeads    Lead[]       @relation("AssignedLeads")
+  notifications    Notification[]
+  auditLogs        AuditLog[]
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@index([oauthProvider, oauthSubject])
+}
+
+model Organization {
+  id            String   @id @default(cuid())
+  name          String
+  slug          String   @unique
+  industry      String?
+  description   String? // "I own a real estate company" → parsed business profile
+  logoUrl       String?
+  brandVoice    Json? // tone, style, vocabulary learned by Domo
+  businessFacts Json? // structured memory: products, pricing, hours, USPs
+  memberships     Membership[]
+  socialAccounts  SocialAccount[]
+  leads           Lead[]
+  conversations   Conversation[]
+  contentItems    ContentItem[]
+  mediaAssets     MediaAsset[]
+  scheduledPosts  ScheduledPost[]
+  campaigns       Campaign[]
+  workflows       Workflow[]
+  knowledgeSources KnowledgeSource[]
+  agentTasks      AgentTask[]
+  suggestions     AiSuggestion[]
+  subscription    Subscription?
+  usageRecords    UsageRecord[]
+  apiKeys         ApiKey[]
+  auditLogs       AuditLog[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+enum OrgRole {
+  OWNER
+  MANAGER
+  MARKETING
+  SALES
+  SUPPORT
+}
+
+model Membership {
+  id             String       @id @default(cuid())
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  role           OrgRole      @default(MARKETING)
+  createdAt      DateTime     @default(now())
+
+  @@unique([userId, organizationId])
+}
+
+// ── Social accounts ───────────────────────────────────────────────
+
+enum SocialPlatform {
+  FACEBOOK
+  INSTAGRAM
+  MESSENGER
+  WHATSAPP
+  TIKTOK
+  YOUTUBE
+  LINKEDIN
+  X
+  PINTEREST
+  THREADS
+}
+
+model SocialAccount {
+  id             String         @id @default(cuid())
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  platform       SocialPlatform
+  externalId     String // page id / channel id / handle
+  displayName    String
+  accessToken    String // encrypted at rest (see CryptoService)
+  refreshToken   String?
+  tokenExpiresAt DateTime?
+  scopes         String[]
+  followerCount  Int            @default(0)
+  connected      Boolean        @default(true)
+  lastSyncedAt   DateTime?
+  scheduledPosts ScheduledPost[]
+  conversations  Conversation[]
+  metrics        PlatformMetric[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@unique([organizationId, platform, externalId])
+}
+
+model PlatformMetric {
+  id              String        @id @default(cuid())
+  socialAccount   SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+  socialAccountId String
+  date            DateTime      @db.Date
+  followers       Int           @default(0)
+  reach           Int           @default(0)
+  impressions     Int           @default(0)
+  engagements     Int           @default(0)
+  clicks          Int           @default(0)
+
+  @@unique([socialAccountId, date])
+}
+
+// ── CRM ───────────────────────────────────────────────────────────
+
+enum FunnelStage {
+  NEW_LEAD
+  CONTACTED
+  INTERESTED
+  QUALIFIED
+  APPOINTMENT
+  PROPOSAL_SENT
+  NEGOTIATION
+  WON
+  LOST
+}
+
+model Lead {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  name           String
+  email          String?
+  phone          String?
+  source         String // "facebook_comment", "whatsapp", "landing_page", "manual"...
+  platform       SocialPlatform?
+  interests      String[]
+  score          Int          @default(0) // 0–100, maintained by LeadQualifier agent
+  stage          FunnelStage  @default(NEW_LEAD)
+  assignedTo     User?        @relation("AssignedLeads", fields: [assignedToId], references: [id])
+  assignedToId   String?
+  purchaseHistory Json?
+  conversations  Conversation[]
+  notes          LeadNote[]
+  followUps      FollowUp[]
+  stageHistory   StageTransition[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId, stage])
+  @@index([organizationId, score])
+}
+
+model LeadNote {
+  id        String   @id @default(cuid())
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId    String
+  authorId  String? // null = written by Domo
+  body      String
+  createdAt DateTime @default(now())
+}
+
+model FollowUp {
+  id        String    @id @default(cuid())
+  lead      Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId    String
+  dueAt     DateTime
+  note      String
+  done      Boolean   @default(false)
+  createdAt DateTime  @default(now())
+
+  @@index([dueAt, done])
+}
+
+model StageTransition {
+  id        String      @id @default(cuid())
+  lead      Lead        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId    String
+  from      FunnelStage
+  to        FunnelStage
+  byAgent   Boolean     @default(false) // true when Domo moved the lead
+  reason    String?
+  createdAt DateTime    @default(now())
+}
+
+// ── Conversations ─────────────────────────────────────────────────
+
+enum ConversationStatus {
+  OPEN
+  AI_HANDLING
+  NEEDS_HUMAN
+  CLOSED
+}
+
+model Conversation {
+  id              String             @id @default(cuid())
+  organization    Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId  String
+  socialAccount   SocialAccount?     @relation(fields: [socialAccountId], references: [id])
+  socialAccountId String?
+  lead            Lead?              @relation(fields: [leadId], references: [id])
+  leadId          String?
+  externalThreadId String? // platform thread id
+  channel         String // "messenger", "whatsapp", "instagram_dm", "webchat"...
+  status          ConversationStatus @default(AI_HANDLING)
+  messages        Message[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([organizationId, status])
+}
+
+enum MessageRole {
+  CUSTOMER
+  DOMO
+  HUMAN_AGENT
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String
+  role           MessageRole
+  body           String
+  attachments    Json? // [{type: "image"|"video"|"file", url}]
+  externalId     String?
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId, createdAt])
+}
+
+// ── Content & media ───────────────────────────────────────────────
+
+enum ContentType {
+  POST
+  CAROUSEL
+  POSTER
+  PRODUCT_PHOTO
+  GRAPHIC
+  VIDEO
+  REEL
+  SHORT
+  TIKTOK_VIDEO
+  BLOG_ARTICLE
+  LANDING_PAGE
+  EMAIL_CAMPAIGN
+  SMS_CAMPAIGN
+  WHATSAPP_CAMPAIGN
+}
+
+enum ContentStatus {
+  DRAFT
+  GENERATING
+  READY
+  APPROVED
+  PUBLISHED
+  FAILED
+}
+
+model ContentItem {
+  id             String        @id @default(cuid())
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  campaign       Campaign?     @relation(fields: [campaignId], references: [id])
+  campaignId     String?
+  type           ContentType
+  status         ContentStatus @default(DRAFT)
+  title          String
+  body           String? // caption / article / email html
+  hashtags       String[]
+  metadata       Json? // per-type payload (carousel slides, video script...)
+  mediaAssets    MediaAsset[]
+  scheduledPosts ScheduledPost[]
+  createdByAgent Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([organizationId, status])
+}
+
+enum MediaKind {
+  IMAGE
+  VIDEO
+  AUDIO
+  DOCUMENT
+}
+
+model MediaAsset {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  contentItem    ContentItem? @relation(fields: [contentItemId], references: [id])
+  contentItemId  String?
+  kind           MediaKind
+  url            String
+  storageKey     String
+  mimeType       String
+  sizeBytes      Int          @default(0)
+  width          Int?
+  height         Int?
+  durationSec    Float?
+  generator      String? // "openai-images", "flux", "runway", "upload"...
+  prompt         String?
+  createdAt      DateTime     @default(now())
+}
+
+// ── Scheduling & publishing ───────────────────────────────────────
+
+enum PostStatus {
+  SCHEDULED
+  PUBLISHING
+  PUBLISHED
+  FAILED
+  CANCELLED
+}
+
+model ScheduledPost {
+  id              String        @id @default(cuid())
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId  String
+  contentItem     ContentItem   @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  contentItemId   String
+  socialAccount   SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+  socialAccountId String
+  scheduledFor    DateTime
+  status          PostStatus    @default(SCHEDULED)
+  externalPostId  String?
+  error           String?
+  publishedAt     DateTime?
+  createdAt       DateTime      @default(now())
+
+  @@index([status, scheduledFor])
+}
+
+// ── Campaigns ─────────────────────────────────────────────────────
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+}
+
+model Campaign {
+  id             String         @id @default(cuid())
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  name           String
+  objective      String // "awareness", "leads", "sales"...
+  budgetCents    Int            @default(0)
+  spentCents     Int            @default(0)
+  platforms      SocialPlatform[]
+  audience       Json? // targeting description
+  status         CampaignStatus @default(DRAFT)
+  startAt        DateTime?
+  endAt          DateTime?
+  contentItems   ContentItem[]
+  report         Json? // aggregated performance snapshot
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+// ── Workflows (marketing automation) ──────────────────────────────
+
+model Workflow {
+  id             String        @id @default(cuid())
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  name           String
+  enabled        Boolean       @default(true)
+  // Graph produced by the visual builder:
+  // { trigger: {type, config}, nodes: [{id, type, config}], edges: [{from, to}] }
+  definition     Json
+  runs           WorkflowRun[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+enum RunStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model WorkflowRun {
+  id         String    @id @default(cuid())
+  workflow   Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  workflowId String
+  status     RunStatus @default(RUNNING)
+  triggerPayload Json?
+  steps      Json? // executed node log
+  error      String?
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+}
+
+// ── Brand training / AI memory ────────────────────────────────────
+
+enum KnowledgeSourceType {
+  PDF
+  WORD
+  EXCEL
+  WEBSITE
+  CATALOGUE
+  PRICE_LIST
+  FAQ
+  TEXT
+}
+
+model KnowledgeSource {
+  id             String              @id @default(cuid())
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  type           KnowledgeSourceType
+  name           String
+  url            String?
+  storageKey     String?
+  status         String              @default("PENDING") // PENDING | INGESTING | READY | FAILED
+  chunks         KnowledgeChunk[]
+  createdAt      DateTime            @default(now())
+}
+
+model KnowledgeChunk {
+  id        String          @id @default(cuid())
+  source    KnowledgeSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  sourceId  String
+  content   String
+  // pgvector embedding column added via raw migration:
+  //   ALTER TABLE "KnowledgeChunk" ADD COLUMN embedding vector(1536);
+  metadata  Json?
+  createdAt DateTime        @default(now())
+}
+
+// ── Agents ────────────────────────────────────────────────────────
+
+enum AgentKind {
+  DOMO
+  CONTENT_CREATOR
+  SOCIAL_MEDIA_MANAGER
+  COPYWRITER
+  VIDEO_CREATOR
+  IMAGE_CREATOR
+  LEAD_QUALIFIER
+  CRM_MANAGER
+  CUSTOMER_SUPPORT
+  ANALYTICS
+  CAMPAIGN_OPTIMIZER
+  TREND_RESEARCH
+  SEO
+}
+
+enum TaskStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model AgentTask {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  agent          AgentKind
+  parentTaskId   String? // Domo delegates → children reference the parent
+  title          String
+  input          Json
+  output         Json?
+  status         TaskStatus   @default(QUEUED)
+  progress       Int          @default(0)
+  error          String?
+  createdAt      DateTime     @default(now())
+  finishedAt     DateTime?
+
+  @@index([organizationId, status])
+}
+
+model AiSuggestion {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  kind           String // caption | hashtags | posting_time | audience | trend | idea
+  title          String
+  body           String
+  dismissed      Boolean      @default(false)
+  applied        Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+}
+
+// ── Notifications ─────────────────────────────────────────────────
+
+model Notification {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  type      String // new_lead | new_message | task_done | campaign_done | post_failed | api_disconnected
+  title     String
+  body      String
+  read      Boolean  @default(false)
+  data      Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+}
+
+// ── Billing & usage ───────────────────────────────────────────────
+
+enum PlanTier {
+  STARTER
+  PROFESSIONAL
+  BUSINESS
+  ENTERPRISE
+}
+
+model Subscription {
+  id                   String       @id @default(cuid())
+  organization         Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId       String       @unique
+  tier                 PlanTier     @default(STARTER)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  status               String       @default("trialing") // mirrors Stripe status
+  currentPeriodEnd     DateTime?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+}
+
+model UsageRecord {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  metric         String // ai_text | ai_image | ai_video | scheduled_post
+  quantity       Int          @default(1)
+  period         String // "2026-07"
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, metric, period])
+}
+
+// ── Security ──────────────────────────────────────────────────────
+
+model ApiKey {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  name           String
+  hashedKey      String       @unique // sha256 of the key; plaintext shown once
+  lastUsedAt     DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime     @default(now())
+}
+
+model AuditLog {
+  id             String        @id @default(cuid())
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  organizationId String?
+  user           User?         @relation(fields: [userId], references: [id])
+  userId         String?
+  action         String // "lead.update", "auth.login", "post.publish"...
+  resource       String?
+  ip             String?
+  metadata       Json?
+  createdAt      DateTime      @default(now())
+
+  @@index([organizationId, createdAt])
+}
