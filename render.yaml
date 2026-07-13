@@ -25,7 +25,7 @@ services:
     runtime: docker
     dockerfilePath: ./julikana/apps/api/Dockerfile
     dockerContext: ./julikana
-    plan: starter
+    plan: free # free web service (sleeps on idle; upgrade for always-on autopilot)
     healthCheckPath: /health
     autoDeploy: true
     envVars:
@@ -49,7 +49,7 @@ services:
         generateValue: true
       # Platform owner (only this email can manage connectors).
       - key: SUPERADMIN_EMAILS
-        value: microcitytech@gmail.com
+        value: johndizark@gmail.com
       # ── Set these in the dashboard (Render will prompt) ───────────
       # At least ONE of the three AI keys is required for Domo to work.
       - key: ANTHROPIC_API_KEY
