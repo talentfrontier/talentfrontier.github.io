@@ -43,7 +43,7 @@ Total cost: **$0**. (Trade-off: free tiers sleep on idle and have small limits
    - `JWT_SECRET` = any long random string
    - `JWT_REFRESH_SECRET` = another long random string
    - `SUPERADMIN_EMAILS` = your email
-   - `ANTHROPIC_API_KEY` = your AI key (so Domo can think)
+   - `GOOGLE_GEMINI_API_KEY` = your Gemini key (free tier works) — OR `ANTHROPIC_API_KEY`. One AI key is required so Domo can think.
    - (optional) `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `STORAGE_DRIVER=supabase`
 5. **Port:** Koyeb injects `PORT` automatically and the app honors it. Health
    check path: `/health`.
