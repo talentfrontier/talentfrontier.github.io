@@ -1,0 +1,32 @@
+{
+  "name": "julikana",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Julikana — AI-powered marketing automation platform. Domo is your complete digital marketing employee.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "db:migrate": "npm --workspace @julikana/api run prisma:migrate",
+    "db:generate": "npm --workspace @julikana/api run prisma:generate",
+    "db:seed": "npm --workspace @julikana/api run prisma:seed"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.0",
+    "prettier": "^3.4.0",
+    "typescript": "^5.7.0"
+  },
+  "overrides": {
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

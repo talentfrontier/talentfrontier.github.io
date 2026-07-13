@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "Julikana",
+    "slug": "julikana",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "julikana",
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#0d0d0d",
+    "android": {
+      "package": "com.julikana.app",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "backgroundColor": "#2a78d6"
+      },
+      "permissions": ["INTERNET"]
+    },
+    "ios": {
+      "bundleIdentifier": "com.julikana.app",
+      "supportsTablet": true
+    }
+  }
+}

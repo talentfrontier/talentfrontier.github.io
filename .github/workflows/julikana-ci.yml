@@ -1,0 +1,72 @@
+name: Julikana CI
+
+on:
+  push:
+    branches: [main]
+    paths: ["julikana/**"]
+  pull_request:
+    paths: ["julikana/**"]
+
+defaults:
+  run:
+    working-directory: julikana
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: julikana
+          POSTGRES_PASSWORD: julikana
+          POSTGRES_DB: julikana_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U julikana"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: julikana/package-lock.json
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Generate Prisma client
+        run: npm run db:generate
+        env:
+          DATABASE_URL: postgresql://julikana:julikana@localhost:5432/julikana_test
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+        env:
+          DATABASE_URL: postgresql://julikana:julikana@localhost:5432/julikana_test
+          REDIS_URL: redis://localhost:6379
+
+      - name: Build
+        run: npm run build
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build API image
+        run: docker build -f julikana/apps/api/Dockerfile julikana
+      - name: Build Web image
+        run: docker build -f julikana/apps/web/Dockerfile julikana
