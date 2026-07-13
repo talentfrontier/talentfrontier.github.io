@@ -1,0 +1,69 @@
+# Render Blueprint for the Julikana backend.
+# One-click deploy: Render dashboard → New → Blueprint → pick this repo → Apply.
+# It creates the API (Docker), a Postgres database, and a Redis instance, and
+# wires them together. Fill the `sync: false` secrets in the dashboard when
+# prompted (at minimum ONE AI key so Domo can think).
+#
+# Note: this file lives at the repo root because Render requires it there; it
+# does not affect the GitHub Pages site (that serves the root HTML separately).
+
+databases:
+  - name: julikana-db
+    plan: free # upgrade to `basic` for production (free expires after 30 days)
+    postgresMajorVersion: "16"
+
+services:
+  # ── Redis (BullMQ queues) ─────────────────────────────────────────
+  - type: redis
+    name: julikana-redis
+    plan: free
+    ipAllowList: [] # internal connections only
+
+  # ── API + in-process workers ──────────────────────────────────────
+  - type: web
+    name: julikana-api
+    runtime: docker
+    dockerfilePath: ./julikana/apps/api/Dockerfile
+    dockerContext: ./julikana
+    plan: starter
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: API_PORT
+        value: "4000"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: julikana-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: julikana-redis
+          property: connectionString
+      # Auth secrets — generated once by Render, kept stable after.
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      # Platform owner (only this email can manage connectors).
+      - key: SUPERADMIN_EMAILS
+        value: microcitytech@gmail.com
+      # ── Set these in the dashboard (Render will prompt) ───────────
+      # At least ONE of the three AI keys is required for Domo to work.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GOOGLE_GEMINI_API_KEY
+        sync: false
+      # Optional media/voice/payment providers — add when you use them.
+      - key: OPENAI_IMAGES_ENABLED
+        sync: false
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false

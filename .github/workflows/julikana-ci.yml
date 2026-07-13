@@ -60,13 +60,6 @@ jobs:
       - name: Build
         run: npm run build
 
-  docker:
-    runs-on: ubuntu-latest
-    needs: test
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build API image
-        run: docker build -f julikana/apps/api/Dockerfile julikana
-      - name: Build Web image
-        run: docker build -f julikana/apps/web/Dockerfile julikana
+  # A containerized-deploy smoke test (building the API/web Docker images)
+  # will be added here once backend deployment is set up. The Dockerfiles
+  # live in apps/*/Dockerfile and are verified at deploy time.

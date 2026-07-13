@@ -16,6 +16,8 @@ class UpdateOrgDto {
   /** "en" | "sw" | "sheng" | "sw-sheng" — Domo's output language. */
   @IsOptional() @IsIn(["en", "sw", "sheng", "sw-sheng"]) locale?: string;
   @IsOptional() @IsObject() persona?: object;
+  @IsOptional() @IsString() emailSenderName?: string;
+  @IsOptional() @IsString() emailSenderAddress?: string;
 }
 
 class InviteDto {

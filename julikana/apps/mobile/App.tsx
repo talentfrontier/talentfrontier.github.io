@@ -1,13 +1,17 @@
 import { StatusBar } from "expo-status-bar";
 import React, { useState } from "react";
-import { Pressable, SafeAreaView, Text, View, useColorScheme } from "react-native";
+import { Pressable, Text, View, useColorScheme } from "react-native";
+import {
+  SafeAreaProvider,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { AutopilotScreen } from "./src/screens/AutopilotScreen";
 import { DashboardScreen } from "./src/screens/DashboardScreen";
 import { DomoScreen } from "./src/screens/DomoScreen";
 import { InboxScreen } from "./src/screens/InboxScreen";
 import { LeadsScreen } from "./src/screens/LeadsScreen";
 import { SignInScreen } from "./src/screens/SignInScreen";
-import { useTheme } from "./src/theme";
+import { Theme, useTheme } from "./src/theme";
 
 const TABS = [
   { key: "domo", label: "Domo", icon: "✦" },
@@ -20,29 +24,43 @@ const TABS = [
 type TabKey = (typeof TABS)[number]["key"];
 
 export default function App() {
+  return (
+    <SafeAreaProvider>
+      <Root />
+    </SafeAreaProvider>
+  );
+}
+
+function Root() {
   const theme = useTheme();
   const scheme = useColorScheme();
+  const insets = useSafeAreaInsets();
   const [authed, setAuthed] = useState(false);
   const [tab, setTab] = useState<TabKey>("domo");
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.plane }}>
+    <View style={{ flex: 1, backgroundColor: theme.plane }}>
       <StatusBar style={scheme === "dark" ? "light" : "dark"} />
       {!authed ? (
-        <SignInScreen
-          theme={theme}
-          onSignedIn={() => setAuthed(true)}
-          onSkip={() => setAuthed(true)}
-        />
+        // Pad the top so the sign-in form clears the status bar / notch.
+        <View style={{ flex: 1, paddingTop: insets.top }}>
+          <SignInScreen
+            theme={theme}
+            onSignedIn={() => setAuthed(true)}
+            onSkip={() => setAuthed(true)}
+          />
+        </View>
       ) : (
         <>
+          {/* Header respects the top inset (status bar / camera notch). */}
           <View
             style={{
               flexDirection: "row",
               alignItems: "center",
               justifyContent: "space-between",
               paddingHorizontal: 16,
-              paddingVertical: 12,
+              paddingTop: insets.top + 12,
+              paddingBottom: 12,
               borderBottomWidth: 1,
               borderColor: theme.hairline,
             }}
@@ -72,41 +90,64 @@ export default function App() {
             {tab === "inbox" && <InboxScreen theme={theme} />}
           </View>
 
-          <View
-            style={{
-              flexDirection: "row",
-              borderTopWidth: 1,
-              borderColor: theme.hairline,
-              backgroundColor: theme.surface,
-            }}
-          >
-            {TABS.map((item) => {
-              const active = item.key === tab;
-              return (
-                <Pressable
-                  key={item.key}
-                  onPress={() => setTab(item.key)}
-                  style={{ flex: 1, alignItems: "center", paddingVertical: 10 }}
-                >
-                  <Text style={{ fontSize: 16, color: active ? theme.brand : theme.muted }}>
-                    {item.icon}
-                  </Text>
-                  <Text
-                    style={{
-                      fontSize: 10,
-                      marginTop: 2,
-                      fontWeight: active ? "700" : "400",
-                      color: active ? theme.brand : theme.muted,
-                    }}
-                  >
-                    {item.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          <TabBar theme={theme} tab={tab} onSelect={setTab} bottomInset={insets.bottom} />
         </>
       )}
-    </SafeAreaView>
+    </View>
+  );
+}
+
+/**
+ * Bottom tab bar. `paddingBottom` includes the device's bottom safe-area inset
+ * so the buttons always sit ABOVE the Android gesture bar / nav buttons (and
+ * the iOS home indicator) instead of overlapping them.
+ */
+function TabBar({
+  theme,
+  tab,
+  onSelect,
+  bottomInset,
+}: {
+  theme: Theme;
+  tab: TabKey;
+  onSelect: (t: TabKey) => void;
+  bottomInset: number;
+}) {
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        borderTopWidth: 1,
+        borderColor: theme.hairline,
+        backgroundColor: theme.surface,
+        paddingTop: 8,
+        paddingBottom: Math.max(bottomInset, 8),
+      }}
+    >
+      {TABS.map((item) => {
+        const active = item.key === tab;
+        return (
+          <Pressable
+            key={item.key}
+            onPress={() => onSelect(item.key)}
+            style={{ flex: 1, alignItems: "center", paddingVertical: 4 }}
+          >
+            <Text style={{ fontSize: 16, color: active ? theme.brand : theme.muted }}>
+              {item.icon}
+            </Text>
+            <Text
+              style={{
+                fontSize: 10,
+                marginTop: 2,
+                fontWeight: active ? "700" : "400",
+                color: active ? theme.brand : theme.muted,
+              }}
+            >
+              {item.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
   );
 }
