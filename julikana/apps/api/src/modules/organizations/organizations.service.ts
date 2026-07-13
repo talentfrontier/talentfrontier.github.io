@@ -27,6 +27,8 @@ export class OrganizationsService {
       brandVoice?: object;
       locale?: string;
       persona?: object;
+      emailSenderName?: string;
+      emailSenderAddress?: string;
     },
   ) {
     return this.prisma.organization.update({

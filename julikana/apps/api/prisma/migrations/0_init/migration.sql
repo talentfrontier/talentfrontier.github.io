@@ -55,6 +55,15 @@ CREATE TYPE "BoostStatus" AS ENUM ('PENDING_PAYMENT', 'PAID', 'SUBMITTING', 'ACT
 -- CreateEnum
 CREATE TYPE "OutreachStatus" AS ENUM ('QUEUED', 'SENT', 'REPLIED', 'CONVERTED', 'OPTED_OUT', 'SUPPRESSED');
 
+-- CreateEnum
+CREATE TYPE "EmailContactStatus" AS ENUM ('SUBSCRIBED', 'UNSUBSCRIBED', 'BOUNCED', 'COMPLAINED');
+
+-- CreateEnum
+CREATE TYPE "EmailCampaignStatus" AS ENUM ('DRAFT', 'SCHEDULED', 'SENDING', 'SENT', 'PAUSED', 'FAILED');
+
+-- CreateEnum
+CREATE TYPE "EmailRecipientStatus" AS ENUM ('QUEUED', 'SENT', 'FAILED', 'SKIPPED');
+
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
@@ -84,6 +93,8 @@ CREATE TABLE "Organization" (
     "businessFacts" JSONB,
     "locale" TEXT NOT NULL DEFAULT 'en',
     "persona" JSONB,
+    "emailSenderName" TEXT,
+    "emailSenderAddress" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -554,6 +565,77 @@ CREATE TABLE "OutreachProspect" (
     CONSTRAINT "OutreachProspect_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "EmailList" (
+    "id" TEXT NOT NULL,
+    "organizationId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "consentConfirmed" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "EmailList_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "EmailContact" (
+    "id" TEXT NOT NULL,
+    "organizationId" TEXT NOT NULL,
+    "listId" TEXT,
+    "email" TEXT NOT NULL,
+    "name" TEXT,
+    "fields" JSONB,
+    "status" "EmailContactStatus" NOT NULL DEFAULT 'SUBSCRIBED',
+    "source" TEXT NOT NULL DEFAULT 'import',
+    "unsubscribeToken" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "EmailContact_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "EmailCampaign" (
+    "id" TEXT NOT NULL,
+    "organizationId" TEXT NOT NULL,
+    "listId" TEXT,
+    "subject" TEXT NOT NULL,
+    "preheader" TEXT,
+    "bodyHtml" TEXT NOT NULL,
+    "status" "EmailCampaignStatus" NOT NULL DEFAULT 'DRAFT',
+    "scheduledFor" TIMESTAMP(3),
+    "totalRecipients" INTEGER NOT NULL DEFAULT 0,
+    "sentCount" INTEGER NOT NULL DEFAULT 0,
+    "failedCount" INTEGER NOT NULL DEFAULT 0,
+    "writtenByDomo" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "EmailCampaign_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "EmailRecipient" (
+    "id" TEXT NOT NULL,
+    "campaignId" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "contactId" TEXT,
+    "status" "EmailRecipientStatus" NOT NULL DEFAULT 'QUEUED',
+    "error" TEXT,
+    "sentAt" TIMESTAMP(3),
+
+    CONSTRAINT "EmailRecipient_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "EmailSuppression" (
+    "id" TEXT NOT NULL,
+    "organizationId" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "reason" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "EmailSuppression_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
@@ -628,6 +710,27 @@ CREATE INDEX "OutreachProspect_status_nextActionAt_idx" ON "OutreachProspect"("s
 
 -- CreateIndex
 CREATE UNIQUE INDEX "OutreachProspect_campaignId_externalUserId_key" ON "OutreachProspect"("campaignId", "externalUserId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "EmailContact_unsubscribeToken_key" ON "EmailContact"("unsubscribeToken");
+
+-- CreateIndex
+CREATE INDEX "EmailContact_organizationId_status_idx" ON "EmailContact"("organizationId", "status");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "EmailContact_organizationId_email_key" ON "EmailContact"("organizationId", "email");
+
+-- CreateIndex
+CREATE INDEX "EmailCampaign_organizationId_status_idx" ON "EmailCampaign"("organizationId", "status");
+
+-- CreateIndex
+CREATE INDEX "EmailRecipient_campaignId_status_idx" ON "EmailRecipient"("campaignId", "status");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "EmailRecipient_campaignId_email_key" ON "EmailRecipient"("campaignId", "email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "EmailSuppression_organizationId_email_key" ON "EmailSuppression"("organizationId", "email");
 
 -- AddForeignKey
 ALTER TABLE "Membership" ADD CONSTRAINT "Membership_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -745,4 +848,22 @@ ALTER TABLE "OutreachCampaign" ADD CONSTRAINT "OutreachCampaign_organizationId_f
 
 -- AddForeignKey
 ALTER TABLE "OutreachProspect" ADD CONSTRAINT "OutreachProspect_campaignId_fkey" FOREIGN KEY ("campaignId") REFERENCES "OutreachCampaign"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "EmailList" ADD CONSTRAINT "EmailList_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "EmailContact" ADD CONSTRAINT "EmailContact_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "EmailContact" ADD CONSTRAINT "EmailContact_listId_fkey" FOREIGN KEY ("listId") REFERENCES "EmailList"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "EmailCampaign" ADD CONSTRAINT "EmailCampaign_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "EmailRecipient" ADD CONSTRAINT "EmailRecipient_campaignId_fkey" FOREIGN KEY ("campaignId") REFERENCES "EmailCampaign"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "EmailSuppression" ADD CONSTRAINT "EmailSuppression_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 

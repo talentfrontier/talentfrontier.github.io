@@ -29,6 +29,7 @@ import { PaymentsModule } from "./modules/payments/payments.module";
 import { BoostModule } from "./modules/boost/boost.module";
 import { AutopilotModule } from "./modules/autopilot/autopilot.module";
 import { OutreachModule } from "./modules/outreach/outreach.module";
+import { EmailModule } from "./modules/email/email.module";
 import { QueuesModule } from "./modules/queues/queues.module";
 import { HealthController } from "./health.controller";
 
@@ -60,6 +61,7 @@ import { HealthController } from "./health.controller";
     BoostModule,
     AutopilotModule,
     OutreachModule,
+    EmailModule,
   ],
   controllers: [HealthController],
   providers: [

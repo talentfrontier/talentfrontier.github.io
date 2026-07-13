@@ -4,6 +4,7 @@ export const QUEUE = {
   WORKFLOW_RUN: "workflow-run",
   KNOWLEDGE_INGEST: "knowledge-ingest",
   MEDIA_GENERATION: "media-generation",
+  EMAIL_SEND: "email-send",
 } as const;
 
 export type QueueName = (typeof QUEUE)[keyof typeof QUEUE];

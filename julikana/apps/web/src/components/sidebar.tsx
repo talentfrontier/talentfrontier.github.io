@@ -11,6 +11,7 @@ const NAV = [
   { href: "/conversations", label: "Inbox", icon: "◇" },
   { href: "/content", label: "Content", icon: "▤" },
   { href: "/campaigns", label: "Campaigns", icon: "▷" },
+  { href: "/email", label: "Email", icon: "✉" },
   { href: "/workflows", label: "Automations", icon: "⇄" },
   { href: "/analytics", label: "Analytics", icon: "∿" },
   { href: "/settings", label: "Settings", icon: "⚙" },

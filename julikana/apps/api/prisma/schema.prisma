@@ -44,6 +44,13 @@ model Organization {
   paymentMethods PaymentMethod[]
   boostOrders    BoostOrder[]
   outreachCampaigns OutreachCampaign[]
+  emailLists       EmailList[]
+  emailContacts    EmailContact[]
+  emailCampaigns   EmailCampaign[]
+  emailSuppressions EmailSuppression[]
+  // Sender identity for CAN-SPAM/GDPR-compliant email footers.
+  emailSenderName  String?
+  emailSenderAddress String? // physical mailing address (legally required in bulk email)
   memberships     Membership[]
   socialAccounts  SocialAccount[]
   leads           Lead[]
@@ -739,4 +746,106 @@ model OutreachProspect {
 
   @@unique([campaignId, externalUserId])
   @@index([status, nextActionAt])
+}
+
+// ── Email marketing (opt-in lists + compliant sending) ────────────
+
+enum EmailContactStatus {
+  SUBSCRIBED
+  UNSUBSCRIBED
+  BOUNCED
+  COMPLAINED
+}
+
+model EmailList {
+  id             String         @id @default(cuid())
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  name           String
+  // Set true only when the uploader attests the contacts opted in. Imports
+  // without consent are rejected — this is the legal basis for sending.
+  consentConfirmed Boolean      @default(false)
+  contacts       EmailContact[]
+  createdAt      DateTime       @default(now())
+}
+
+model EmailContact {
+  id             String             @id @default(cuid())
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  list           EmailList?         @relation(fields: [listId], references: [id])
+  listId         String?
+  email          String
+  name           String?
+  fields         Json? // arbitrary merge fields from the uploaded sheet
+  status         EmailContactStatus @default(SUBSCRIBED)
+  source         String             @default("import") // "import" | "signup" | "purchase"
+  unsubscribeToken String           @unique @default(cuid())
+  createdAt      DateTime           @default(now())
+
+  @@unique([organizationId, email])
+  @@index([organizationId, status])
+}
+
+enum EmailCampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  PAUSED
+  FAILED
+}
+
+model EmailCampaign {
+  id             String              @id @default(cuid())
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  listId         String?
+  subject        String
+  preheader      String?
+  bodyHtml       String
+  status         EmailCampaignStatus @default(DRAFT)
+  scheduledFor   DateTime?
+  // Aggregate counters updated by the send worker.
+  totalRecipients Int                @default(0)
+  sentCount      Int                 @default(0)
+  failedCount    Int                 @default(0)
+  writtenByDomo  Boolean             @default(false)
+  recipients     EmailRecipient[]
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@index([organizationId, status])
+}
+
+enum EmailRecipientStatus {
+  QUEUED
+  SENT
+  FAILED
+  SKIPPED // suppressed / unsubscribed at send time
+}
+
+model EmailRecipient {
+  id         String               @id @default(cuid())
+  campaign   EmailCampaign        @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  campaignId String
+  email      String
+  contactId  String?
+  status     EmailRecipientStatus @default(QUEUED)
+  error      String?
+  sentAt     DateTime?
+
+  @@unique([campaignId, email])
+  @@index([campaignId, status])
+}
+
+model EmailSuppression {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  email          String
+  reason         String // "unsubscribe" | "bounce" | "complaint" | "manual"
+  createdAt      DateTime     @default(now())
+
+  @@unique([organizationId, email])
 }
