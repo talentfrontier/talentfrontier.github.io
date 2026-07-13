@@ -17,6 +17,10 @@ ENV NODE_ENV=production
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/apps/api/dist ./dist
 COPY --from=build /app/apps/api/prisma ./prisma
+COPY --from=build /app/apps/api/package.json ./package.json
+COPY --from=build /app/apps/api/docker-entrypoint.sh ./docker-entrypoint.sh
+RUN chmod +x ./docker-entrypoint.sh
 EXPOSE 4000
 USER node
-CMD ["node", "dist/main.js"]
+# Applies pending DB migrations, then starts the API.
+CMD ["./docker-entrypoint.sh"]
