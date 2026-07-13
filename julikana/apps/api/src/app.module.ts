@@ -24,6 +24,11 @@ import { NotificationsModule } from "./modules/notifications/notifications.modul
 import { BillingModule } from "./modules/billing/billing.module";
 import { BrandModule } from "./modules/brand/brand.module";
 import { AiModule } from "./modules/ai/ai.module";
+import { ConnectorsModule } from "./modules/connectors/connectors.module";
+import { PaymentsModule } from "./modules/payments/payments.module";
+import { BoostModule } from "./modules/boost/boost.module";
+import { AutopilotModule } from "./modules/autopilot/autopilot.module";
+import { OutreachModule } from "./modules/outreach/outreach.module";
 import { QueuesModule } from "./modules/queues/queues.module";
 import { HealthController } from "./health.controller";
 
@@ -50,6 +55,11 @@ import { HealthController } from "./health.controller";
     BillingModule,
     BrandModule,
     AiModule,
+    ConnectorsModule,
+    PaymentsModule,
+    BoostModule,
+    AutopilotModule,
+    OutreachModule,
   ],
   controllers: [HealthController],
   providers: [

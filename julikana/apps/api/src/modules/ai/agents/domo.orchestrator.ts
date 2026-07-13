@@ -34,8 +34,15 @@ export class DomoOrchestrator {
     @Inject(queueToken(QUEUE.AGENT_TASK)) private readonly agentQueue: Queue,
   ) {}
 
-  /** "Promote my new laptop" → plan → queued tasks for specialized agents. */
-  async dispatch(organizationId: string, instruction: string) {
+  /**
+   * "Promote my new laptop" → plan → queued tasks for specialized agents.
+   *
+   * New instructions never block ongoing work: the queue runs several agents
+   * concurrently, and user-initiated tasks are enqueued at a HIGHER priority
+   * (1) than background autopilot work (default), so a fresh request jumps
+   * ahead while whatever is already running finishes normally.
+   */
+  async dispatch(organizationId: string, instruction: string, priority = 1) {
     const memory = await this.memory.getMemory(organizationId, instruction);
     const plan = await this.plan(instruction, memory);
 
@@ -63,7 +70,11 @@ export class DomoOrchestrator {
       ),
     );
     await this.agentQueue.addBulk(
-      children.map((task) => ({ name: task.agent, data: { taskId: task.id } })),
+      children.map((task) => ({
+        name: task.agent,
+        data: { taskId: task.id },
+        opts: { priority },
+      })),
     );
     return { planId: parent.id, understanding: plan.understanding, tasks: children };
   }

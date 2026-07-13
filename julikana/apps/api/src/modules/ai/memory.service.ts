@@ -22,6 +22,8 @@ export class MemoryService {
       description: org.description ?? undefined,
       brandVoice: (org.brandVoice as Record<string, unknown>) ?? undefined,
       businessFacts: (org.businessFacts as Record<string, unknown>) ?? undefined,
+      locale: org.locale ?? "en",
+      persona: (org.persona as Record<string, unknown>) ?? undefined,
       knowledgeSnippets: query ? await this.searchKnowledge(organizationId, query) : [],
     };
   }
@@ -71,9 +73,43 @@ export class MemoryService {
       memory.businessFacts && `Known facts: ${JSON.stringify(memory.businessFacts)}`,
       memory.knowledgeSnippets.length &&
         `Relevant knowledge:\n${memory.knowledgeSnippets.map((s) => `- ${s}`).join("\n")}`,
+      MemoryService.localeInstruction(memory.locale, memory.persona),
       "Stay factual about the business. Never invent prices or promises not present in the facts.",
     ]
       .filter(Boolean)
       .join("\n");
+  }
+
+  /**
+   * Language & voice instruction. "sheng"/"sw-sheng" makes Domo write like a
+   * Gen-Z Nairobian: natural Sheng + Swahili/English code-switching, current
+   * slang, the right emoji energy — while staying readable and on-brand.
+   */
+  static localeInstruction(
+    locale = "en",
+    persona?: Record<string, unknown>,
+  ): string {
+    const emoji = (persona?.emojiLevel as string) ?? "medium";
+    switch (locale) {
+      case "sw":
+        return "Write in clear, natural Kiswahili (Kenyan register). Keep it warm and conversational.";
+      case "sheng":
+        return [
+          "Write in Sheng the way a Gen-Z Nairobian actually talks — real street slang,",
+          "not textbook Swahili. Code-switch naturally between Sheng, Kiswahili and English",
+          "mid-sentence (e.g. 'Niaje fam, hii deal ni fire 🔥 usiskip'). Use current Nairobi",
+          "slang (poa, sare, mreembe, form ni gani, tuko fiti, bazu, msee, doo, keja).",
+          `Emoji energy: ${emoji}. Stay authentic, never cringe or forced. Keep it respectful`,
+          "and never offensive.",
+        ].join(" ");
+      case "sw-sheng":
+        return [
+          "Write in a natural Nairobi mix of Kiswahili and light Sheng with some English —",
+          "friendly and current, the way young Kenyan brands talk on Instagram/TikTok.",
+          `Emoji energy: ${emoji}.`,
+        ].join(" ");
+      default:
+        return "Write in clear, engaging English.";
+    }
   }
 }

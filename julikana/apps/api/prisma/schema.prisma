@@ -38,6 +38,12 @@ model Organization {
   logoUrl       String?
   brandVoice    Json? // tone, style, vocabulary learned by Domo
   businessFacts Json? // structured memory: products, pricing, hours, USPs
+  locale        String   @default("en") // "en" | "sw" | "sheng" | "sw-sheng"
+  persona       Json? // { style: "nairobi_genz", codeSwitch: true, emojiLevel: "high" }
+  autopilot      AutopilotConfig?
+  paymentMethods PaymentMethod[]
+  boostOrders    BoostOrder[]
+  outreachCampaigns OutreachCampaign[]
   memberships     Membership[]
   socialAccounts  SocialAccount[]
   leads           Lead[]
@@ -581,4 +587,156 @@ model AuditLog {
   createdAt      DateTime      @default(now())
 
   @@index([organizationId, createdAt])
+}
+
+// ── Connectors (owner-managed integrations) ───────────────────────
+// Only platform super-admins (SUPERADMIN_EMAILS) can create/enable
+// connector types. Org users may USE enabled connectors but never add or
+// see the underlying credentials.
+
+model Connector {
+  id           String   @id @default(cuid())
+  key          String   @unique // "instagram", "mpesa", "stripe", "custom_crm"...
+  displayName  String
+  category     String // "social" | "payment" | "crm" | "messaging" | "custom"
+  enabled      Boolean  @default(false)
+  // Encrypted app-level credentials (client id/secret, api keys). Never
+  // exposed through org-scoped endpoints.
+  credentials  String? // AES-256-GCM blob via CryptoService
+  config       Json? // non-secret config (scopes, base URLs, rate caps)
+  createdBy    String? // super-admin user id
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ── Payments (tokenized only — NO raw PAN/CVV ever stored) ─────────
+
+enum PaymentProvider {
+  STRIPE // card tokenized by Stripe; we store only the token
+  MPESA // Daraja STK push; we store only the phone + receipts
+}
+
+model PaymentMethod {
+  id                    String          @id @default(cuid())
+  organization          Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId        String
+  provider              PaymentProvider
+  label                 String // "Business Visa •••• 4242" | "M-Pesa 07xx"
+  // Stripe: payment_method token + customer id. NEVER the card number.
+  stripePaymentMethodId String?
+  stripeCustomerId      String?
+  cardBrand             String? // display only, from Stripe
+  cardLast4             String? // display only, from Stripe (safe to store)
+  cardExpMonth          Int? // display only
+  cardExpYear           Int? // display only
+  // M-Pesa: the paying phone number (not a secret).
+  mpesaPhone            String?
+  isDefault             Boolean         @default(false)
+  boostOrders           BoostOrder[]
+  createdAt             DateTime        @default(now())
+
+  @@index([organizationId, isDefault])
+}
+
+// ── Post boosting (paid promotion via official ad APIs) ────────────
+
+enum BoostStatus {
+  PENDING_PAYMENT
+  PAID
+  SUBMITTING
+  ACTIVE
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model BoostOrder {
+  id               String         @id @default(cuid())
+  organization     Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId   String
+  scheduledPostId  String? // the post being boosted (if it is a published post)
+  socialAccountId  String
+  platform         SocialPlatform
+  objective        String // "reach" | "traffic" | "leads" | "messages"
+  budgetCents      Int
+  currency         String         @default("KES")
+  durationDays     Int
+  audience         Json? // targeting spec normalized per platform
+  paymentMethod    PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
+  paymentMethodId  String?
+  status           BoostStatus    @default(PENDING_PAYMENT)
+  externalAdId     String? // ad/campaign id returned by the platform
+  mpesaCheckoutId  String? // Daraja CheckoutRequestID
+  error            String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([organizationId, status])
+}
+
+// ── Autopilot (unsupervised operation) ────────────────────────────
+
+model AutopilotConfig {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String       @unique
+  enabled        Boolean      @default(false)
+  // Growth aggressiveness within SAFE per-platform limits (never "unlimited").
+  intensity      String       @default("balanced") // "gentle" | "balanced" | "aggressive"
+  // Platforms Domo is allowed to act on autonomously.
+  platforms      SocialPlatform[]
+  // Daily action ceilings the engine will never exceed (anti-ban).
+  maxPostsPerDay Int          @default(3)
+  maxRepliesPerDay Int        @default(200)
+  autoBoostWinners Boolean    @default(false)
+  autoBoostBudgetCentsPerWeek Int @default(0)
+  quietHoursStart Int         @default(23) // local hour
+  quietHoursEnd   Int         @default(6)
+  lastRunAt       DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+// ── Compliant outreach (inbound + opt-in only) ────────────────────
+
+enum OutreachStatus {
+  QUEUED
+  SENT
+  REPLIED
+  CONVERTED
+  OPTED_OUT
+  SUPPRESSED
+}
+
+model OutreachCampaign {
+  id             String             @id @default(cuid())
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  name           String
+  channel        String // "instagram_reply" | "whatsapp_optin" | "comment_engage"
+  // Outreach only targets people who ALREADY interacted (commented, messaged,
+  // followed, or opted in). Cold scraping of strangers is not supported.
+  triggerSource  String // "commented" | "messaged_first" | "mentioned" | "opted_in"
+  messageTemplate String
+  followUpSteps  Json? // [{ afterHours, template }] — stops on reply/opt-out
+  dailyCap       Int                @default(50)
+  enabled        Boolean            @default(true)
+  prospects      OutreachProspect[]
+  createdAt      DateTime           @default(now())
+}
+
+model OutreachProspect {
+  id               String           @id @default(cuid())
+  campaign         OutreachCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  campaignId       String
+  externalUserId   String // platform handle/id that interacted first
+  displayName      String?
+  status           OutreachStatus   @default(QUEUED)
+  interactionProof String // what they did to qualify (required, audited)
+  lastStepIndex    Int              @default(0)
+  nextActionAt     DateTime?
+  createdAt        DateTime         @default(now())
+
+  @@unique([campaignId, externalUserId])
+  @@index([status, nextActionAt])
 }

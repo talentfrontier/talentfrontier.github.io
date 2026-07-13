@@ -20,9 +20,19 @@ export class OrganizationsService {
 
   update(
     organizationId: string,
-    data: { name?: string; industry?: string; description?: string; brandVoice?: object },
+    data: {
+      name?: string;
+      industry?: string;
+      description?: string;
+      brandVoice?: object;
+      locale?: string;
+      persona?: object;
+    },
   ) {
-    return this.prisma.organization.update({ where: { id: organizationId }, data });
+    return this.prisma.organization.update({
+      where: { id: organizationId },
+      data: data as never,
+    });
   }
 
   async invite(organizationId: string, email: string, role: OrgRole) {

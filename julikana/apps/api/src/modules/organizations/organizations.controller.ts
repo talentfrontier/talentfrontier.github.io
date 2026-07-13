@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { OrgRole } from "@prisma/client";
-import { IsEmail, IsEnum, IsObject, IsOptional, IsString } from "class-validator";
+import { IsEmail, IsEnum, IsIn, IsObject, IsOptional, IsString } from "class-validator";
 import { CurrentUser, AuthUser } from "../../common/decorators/current-user.decorator";
 import { Roles } from "../../common/decorators/roles.decorator";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
@@ -13,6 +13,9 @@ class UpdateOrgDto {
   @IsOptional() @IsString() industry?: string;
   @IsOptional() @IsString() description?: string;
   @IsOptional() @IsObject() brandVoice?: object;
+  /** "en" | "sw" | "sheng" | "sw-sheng" — Domo's output language. */
+  @IsOptional() @IsIn(["en", "sw", "sheng", "sw-sheng"]) locale?: string;
+  @IsOptional() @IsObject() persona?: object;
 }
 
 class InviteDto {

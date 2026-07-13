@@ -9,6 +9,9 @@ export interface OrgMemory {
   brandVoice?: Record<string, unknown>;
   businessFacts?: Record<string, unknown>;
   knowledgeSnippets: string[];
+  /** "en" | "sw" | "sheng" | "sw-sheng" — controls Domo's output language. */
+  locale?: string;
+  persona?: Record<string, unknown>;
 }
 
 export interface AgentInput {

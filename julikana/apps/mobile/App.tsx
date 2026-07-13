@@ -1,6 +1,7 @@
 import { StatusBar } from "expo-status-bar";
 import React, { useState } from "react";
 import { Pressable, SafeAreaView, Text, View, useColorScheme } from "react-native";
+import { AutopilotScreen } from "./src/screens/AutopilotScreen";
 import { DashboardScreen } from "./src/screens/DashboardScreen";
 import { DomoScreen } from "./src/screens/DomoScreen";
 import { InboxScreen } from "./src/screens/InboxScreen";
@@ -10,6 +11,7 @@ import { useTheme } from "./src/theme";
 
 const TABS = [
   { key: "domo", label: "Domo", icon: "✦" },
+  { key: "autopilot", label: "Autopilot", icon: "◐" },
   { key: "dashboard", label: "Overview", icon: "▦" },
   { key: "leads", label: "Leads", icon: "◎" },
   { key: "inbox", label: "Inbox", icon: "◇" },
@@ -64,6 +66,7 @@ export default function App() {
 
           <View style={{ flex: 1 }}>
             {tab === "domo" && <DomoScreen theme={theme} />}
+            {tab === "autopilot" && <AutopilotScreen theme={theme} />}
             {tab === "dashboard" && <DashboardScreen theme={theme} />}
             {tab === "leads" && <LeadsScreen theme={theme} />}
             {tab === "inbox" && <InboxScreen theme={theme} />}
