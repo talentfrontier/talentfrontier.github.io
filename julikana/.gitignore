@@ -9,3 +9,6 @@ coverage/
 .env.*.local
 .DS_Store
 prisma/*.db
+
+# TS build cache
+*.tsbuildinfo
