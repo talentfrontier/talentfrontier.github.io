@@ -25,7 +25,7 @@ services:
     runtime: docker
     dockerfilePath: ./julikana/apps/api/Dockerfile
     dockerContext: ./julikana
-    plan: starter
+    plan: free # free web service (sleeps on idle; upgrade for always-on autopilot)
     healthCheckPath: /health
     autoDeploy: true
     envVars:

@@ -27,8 +27,10 @@ async function bootstrap() {
     .build();
   SwaggerModule.setup("docs", app, SwaggerModule.createDocument(app, swagger));
 
-  const port = Number(process.env.API_PORT ?? 4000);
-  await app.listen(port);
+  // Honor the platform-injected PORT (Koyeb/Railway/Render/Fly all set it),
+  // falling back to API_PORT then 4000 for local dev.
+  const port = Number(process.env.PORT ?? process.env.API_PORT ?? 4000);
+  await app.listen(port, "0.0.0.0");
   new Logger("Bootstrap").log(`Julikana API on :${port} — Swagger at /docs`);
 }
 
