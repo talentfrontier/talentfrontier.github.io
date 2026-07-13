@@ -37,6 +37,15 @@ With the API running locally, the Android emulator reaches it via the default
 `http://10.0.2.2:4000`. On a physical device set
 `EXPO_PUBLIC_API_URL=http://<your-lan-ip>:4000` when starting Metro.
 
+## UI conventions (keep these)
+
+- **Always respect safe-area insets on edge UI.** Use
+  `react-native-safe-area-context` (`SafeAreaProvider` + `useSafeAreaInsets`)
+  and pad the header by `insets.top` and the bottom tab bar by
+  `insets.bottom`. Never rely on `react-native`'s `SafeAreaView` (it only
+  insets on iOS), or the tab bar will overlap Android's gesture bar / nav
+  buttons. New bottom-anchored controls must clear the system nav the same way.
+
 ## Notes
 
 - `eas.json` profiles: `preview` → APK (internal distribution), `production`
