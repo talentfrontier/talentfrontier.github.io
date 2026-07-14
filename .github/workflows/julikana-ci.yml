@@ -57,6 +57,14 @@ jobs:
           DATABASE_URL: postgresql://julikana:julikana@localhost:5432/julikana_test
           REDIS_URL: redis://localhost:6379
 
+      # Resolves the whole NestJS provider graph so missing-provider / DI
+      # wiring errors fail CI instead of the deploy.
+      - name: DI graph check
+        run: npm --workspace @julikana/api run di-check
+        env:
+          DATABASE_URL: postgresql://julikana:julikana@localhost:5432/julikana_test
+          REDIS_URL: redis://localhost:6379
+
       - name: Build
         run: npm run build
 

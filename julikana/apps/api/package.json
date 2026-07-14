@@ -9,6 +9,7 @@
     "lint": "eslint \"src/**/*.ts\"",
     "test": "jest",
     "typecheck": "tsc --noEmit",
+    "di-check": "ts-node --transpileOnly scripts/di-check.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
     "prisma:seed": "ts-node --transpileOnly prisma/seed.ts"

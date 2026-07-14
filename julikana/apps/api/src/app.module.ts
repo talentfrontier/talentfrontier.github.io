@@ -7,6 +7,7 @@ import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 
 import { configuration } from "./config/configuration";
 import { PrismaModule } from "./prisma/prisma.module";
+import { CryptoModule } from "./common/services/crypto.module";
 import { LoggingInterceptor } from "./common/interceptors/logging.interceptor";
 
 import { AuthModule } from "./modules/auth/auth.module";
@@ -40,6 +41,7 @@ import { HealthController } from "./health.controller";
     EventEmitterModule.forRoot(),
     ScheduleModule.forRoot(),
     PrismaModule,
+    CryptoModule,
     QueuesModule,
     AuthModule,
     UsersModule,
