@@ -13,13 +13,13 @@
       "distribution": "internal",
       "android": { "buildType": "apk" },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://YOUR-API-HOST"
+        "EXPO_PUBLIC_API_URL": "https://talentfrontier-github-io.onrender.com"
       }
     },
     "production": {
       "android": { "buildType": "app-bundle" },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://YOUR-API-HOST"
+        "EXPO_PUBLIC_API_URL": "https://talentfrontier-github-io.onrender.com"
       }
     }
   },

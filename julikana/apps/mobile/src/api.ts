@@ -36,6 +36,20 @@ export async function login(email: string, password: string) {
   return tokens;
 }
 
+export async function register(input: {
+  email: string;
+  password: string;
+  name: string;
+  organizationName: string;
+}) {
+  const tokens = await api<{ accessToken: string; refreshToken: string }>(
+    "/auth/register",
+    { method: "POST", body: JSON.stringify(input) },
+  );
+  setToken(tokens.accessToken);
+  return tokens;
+}
+
 /* ── Demo fallbacks (offline / preview mode) ─────────────────────── */
 
 export const demoSummary = {
