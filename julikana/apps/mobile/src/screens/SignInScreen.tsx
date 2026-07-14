@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
-import { login } from "../api";
+import { login, register } from "../api";
 import { Theme } from "../theme";
 
 export function SignInScreen({
@@ -12,8 +12,11 @@ export function SignInScreen({
   onSignedIn: () => void;
   onSkip: () => void;
 }) {
+  const [mode, setMode] = useState<"login" | "register">("register");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [company, setCompany] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -21,10 +24,26 @@ export function SignInScreen({
     setBusy(true);
     setError(null);
     try {
-      await login(email.trim(), password);
+      if (mode === "register") {
+        if (password.length < 10) throw new Error("Password must be at least 10 characters.");
+        await register({
+          email: email.trim(),
+          password,
+          name: name.trim() || "Owner",
+          organizationName: company.trim() || "My Business",
+        });
+      } else {
+        await login(email.trim(), password);
+      }
       onSignedIn();
-    } catch {
-      setError("Could not sign in — check credentials and API URL.");
+    } catch (e) {
+      setError(
+        e instanceof Error && /10 characters/.test(e.message)
+          ? e.message
+          : mode === "register"
+            ? "Could not create account — that email may already exist, or the API is waking up (try again in ~30s)."
+            : "Could not sign in — check your email/password. First request can take ~30s while the server wakes.",
+      );
     } finally {
       setBusy(false);
     }
@@ -60,10 +79,28 @@ export function SignInScreen({
           Julikana
         </Text>
         <Text style={{ color: theme.ink2, fontSize: 13, marginTop: 4 }}>
-          Domo, your AI marketing employee
+          {mode === "register" ? "Create your workspace" : "Welcome back"}
         </Text>
       </View>
 
+      {mode === "register" && (
+        <>
+          <TextInput
+            style={inputStyle}
+            placeholder="Your name"
+            placeholderTextColor={theme.muted}
+            value={name}
+            onChangeText={setName}
+          />
+          <TextInput
+            style={inputStyle}
+            placeholder="Business / company name"
+            placeholderTextColor={theme.muted}
+            value={company}
+            onChangeText={setCompany}
+          />
+        </>
+      )}
       <TextInput
         style={inputStyle}
         placeholder="you@company.com"
@@ -75,7 +112,7 @@ export function SignInScreen({
       />
       <TextInput
         style={inputStyle}
-        placeholder="Password"
+        placeholder={mode === "register" ? "Password (min 10 characters)" : "Password"}
         placeholderTextColor={theme.muted}
         secureTextEntry
         value={password}
@@ -95,12 +132,30 @@ export function SignInScreen({
         }}
       >
         <Text style={{ color: "#fff", fontWeight: "600", fontSize: 14 }}>
-          {busy ? "Signing in…" : "Sign in"}
+          {busy
+            ? mode === "register"
+              ? "Creating…"
+              : "Signing in…"
+            : mode === "register"
+              ? "Create account"
+              : "Sign in"}
         </Text>
       </Pressable>
 
-      <Pressable onPress={onSkip} style={{ alignItems: "center", paddingVertical: 10 }}>
-        <Text style={{ color: theme.ink2, fontSize: 13 }}>Explore the demo →</Text>
+      <Pressable
+        onPress={() => {
+          setMode(mode === "register" ? "login" : "register");
+          setError(null);
+        }}
+        style={{ alignItems: "center", paddingVertical: 6 }}
+      >
+        <Text style={{ color: theme.ink2, fontSize: 13 }}>
+          {mode === "register" ? "Already have an account? Sign in" : "New here? Create an account"}
+        </Text>
+      </Pressable>
+
+      <Pressable onPress={onSkip} style={{ alignItems: "center", paddingVertical: 4 }}>
+        <Text style={{ color: theme.muted, fontSize: 13 }}>Explore the demo →</Text>
       </Pressable>
     </View>
   );
