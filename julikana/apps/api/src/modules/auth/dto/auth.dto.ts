@@ -18,6 +18,15 @@ export class RefreshDto {
   @ApiProperty() @IsString() refreshToken: string;
 }
 
+export class ForgotPasswordDto {
+  @ApiProperty() @IsEmail() email: string;
+}
+
+export class ResetPasswordDto {
+  @ApiProperty() @IsString() token: string;
+  @ApiProperty() @IsString() @MinLength(10) password: string;
+}
+
 export class TwoFactorDto {
   @ApiProperty() @IsString() code: string;
 }

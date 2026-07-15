@@ -10,6 +10,6 @@ import { EmailSendProcessor } from "./send.processor";
   imports: [AiModule],
   controllers: [EmailController],
   providers: [ContactsService, EmailCampaignsService, EmailTransportService, EmailSendProcessor],
-  exports: [ContactsService, EmailCampaignsService],
+  exports: [ContactsService, EmailCampaignsService, EmailTransportService],
 })
 export class EmailModule {}

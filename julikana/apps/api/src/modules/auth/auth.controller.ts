@@ -5,7 +5,14 @@ import { Response } from "express";
 import { CurrentUser, AuthUser } from "../../common/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
 import { AuthService } from "./auth.service";
-import { LoginDto, RefreshDto, RegisterDto, TwoFactorDto } from "./dto/auth.dto";
+import {
+  ForgotPasswordDto,
+  LoginDto,
+  RefreshDto,
+  RegisterDto,
+  ResetPasswordDto,
+  TwoFactorDto,
+} from "./dto/auth.dto";
 
 @ApiTags("auth")
 @Controller("auth")
@@ -25,8 +32,21 @@ export class AuthController {
   }
 
   @Post("refresh")
+  @ApiOperation({ summary: "Exchange a refresh token for fresh tokens (stay signed in)" })
   refresh(@Body() dto: RefreshDto) {
     return this.auth.refresh(dto.refreshToken);
+  }
+
+  @Post("forgot-password")
+  @ApiOperation({ summary: "Email a password-reset token (always returns ok)" })
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.auth.requestPasswordReset(dto.email);
+  }
+
+  @Post("reset-password")
+  @ApiOperation({ summary: "Set a new password using an emailed token" })
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.auth.resetPassword(dto.token, dto.password);
   }
 
   @Get("google")
