@@ -1,20 +1,23 @@
 import { StatusBar } from "expo-status-bar";
-import React, { useState } from "react";
-import { Pressable, Text, View, useColorScheme } from "react-native";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, Pressable, Text, View, useColorScheme } from "react-native";
 import {
   SafeAreaProvider,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
+import { bootstrapAuth, logout } from "./src/api";
 import { AutopilotScreen } from "./src/screens/AutopilotScreen";
 import { DashboardScreen } from "./src/screens/DashboardScreen";
 import { DomoScreen } from "./src/screens/DomoScreen";
 import { InboxScreen } from "./src/screens/InboxScreen";
 import { LeadsScreen } from "./src/screens/LeadsScreen";
 import { SignInScreen } from "./src/screens/SignInScreen";
+import { StudioScreen } from "./src/screens/StudioScreen";
 import { Theme, useTheme } from "./src/theme";
 
 const TABS = [
   { key: "domo", label: "Domo", icon: "✦" },
+  { key: "studio", label: "Studio", icon: "▶" },
   { key: "autopilot", label: "Autopilot", icon: "◐" },
   { key: "dashboard", label: "Overview", icon: "▦" },
   { key: "leads", label: "Leads", icon: "◎" },
@@ -36,7 +39,24 @@ function Root() {
   const scheme = useColorScheme();
   const insets = useSafeAreaInsets();
   const [authed, setAuthed] = useState(false);
+  const [booting, setBooting] = useState(true);
   const [tab, setTab] = useState<TabKey>("domo");
+
+  // Try to restore a "keep me signed in" session on launch.
+  useEffect(() => {
+    bootstrapAuth()
+      .then((ok) => setAuthed(ok))
+      .finally(() => setBooting(false));
+  }, []);
+
+  if (booting) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: theme.plane }}>
+        <StatusBar style={scheme === "dark" ? "light" : "dark"} />
+        <ActivityIndicator color={theme.brand} />
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.plane }}>
@@ -68,7 +88,14 @@ function Root() {
             <Text style={{ color: theme.ink, fontSize: 17, fontWeight: "700" }}>
               {TABS.find((t) => t.key === tab)?.label}
             </Text>
-            <View
+            {/* Tap the badge to sign out. */}
+            <Pressable
+              onPress={async () => {
+                await logout();
+                setAuthed(false);
+                setTab("domo");
+              }}
+              hitSlop={8}
               style={{
                 width: 30,
                 height: 30,
@@ -79,11 +106,12 @@ function Root() {
               }}
             >
               <Text style={{ color: "#fff", fontWeight: "800", fontSize: 14 }}>J</Text>
-            </View>
+            </Pressable>
           </View>
 
           <View style={{ flex: 1 }}>
             {tab === "domo" && <DomoScreen theme={theme} />}
+            {tab === "studio" && <StudioScreen theme={theme} />}
             {tab === "autopilot" && <AutopilotScreen theme={theme} />}
             {tab === "dashboard" && <DashboardScreen theme={theme} />}
             {tab === "leads" && <LeadsScreen theme={theme} />}

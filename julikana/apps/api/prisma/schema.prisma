@@ -19,6 +19,9 @@ model User {
   twoFactorEnabled Boolean      @default(false)
   oauthProvider    String? // "google" | "microsoft"
   oauthSubject     String?
+  // Password reset: we store only a hash of the emailed token, plus expiry.
+  passwordResetTokenHash String?
+  passwordResetExpiresAt DateTime?
   memberships      Membership[]
   assignedLeads    Lead[]       @relation("AssignedLeads")
   notifications    Notification[]

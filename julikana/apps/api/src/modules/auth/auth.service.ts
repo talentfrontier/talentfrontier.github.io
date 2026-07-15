@@ -5,8 +5,10 @@ import {
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import * as argon2 from "argon2";
+import { createHash, randomBytes } from "crypto";
 import { authenticator } from "otplib";
 import { CryptoService } from "../../common/services/crypto.service";
+import { EmailTransportService } from "../email/email-transport.service";
 import { PrismaService } from "../../prisma/prisma.service";
 import { RegisterDto } from "./dto/auth.dto";
 
@@ -24,6 +26,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly crypto: CryptoService,
+    private readonly email: EmailTransportService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -115,6 +118,87 @@ export class AuthService {
     } catch {
       throw new UnauthorizedException("Invalid refresh token");
     }
+  }
+
+  /**
+   * Starts a password reset. Always resolves the same way (never reveals
+   * whether the email exists) to avoid account enumeration. A one-time token
+   * is emailed; only its hash is stored, with a 1-hour expiry.
+   *
+   * The email actually sends once EMAIL_PROVIDER + its key are configured
+   * (e.g. Resend). Until then the transport logs it. Set
+   * AUTH_RESET_RETURN_TOKEN=true in a non-production env to get the token back
+   * in the response for testing.
+   */
+  async requestPasswordReset(email: string) {
+    const generic = { ok: true };
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    // OAuth-only accounts have no password to reset.
+    if (!user || !user.passwordHash) return generic;
+
+    const token = randomBytes(32).toString("hex");
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordResetTokenHash: this.hashToken(token),
+        passwordResetExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      },
+    });
+
+    const webUrl = process.env.WEB_URL ?? "https://julikana.app";
+    const link = `${webUrl}/reset-password?token=${token}`;
+    await this.email
+      .send({
+        to: user.email,
+        from: process.env.EMAIL_FROM ?? "security@julikana.app",
+        fromName: "Julikana Security",
+        subject: "Reset your Julikana password",
+        html:
+          `<p>Hi ${user.name || "there"},</p>` +
+          `<p>Use this code in the app to reset your password, or tap the link below. ` +
+          `It expires in 1 hour.</p>` +
+          `<p style="font-size:20px;font-weight:700;letter-spacing:2px">${token.slice(0, 8).toUpperCase()}</p>` +
+          `<p><a href="${link}">Reset your password</a></p>` +
+          `<p>If you didn't request this, you can ignore this email.</p>`,
+      })
+      .catch(() => undefined);
+
+    await this.audit(user.id, "auth.password_reset_requested");
+    const exposeToken =
+      process.env.AUTH_RESET_RETURN_TOKEN === "true" &&
+      process.env.NODE_ENV !== "production";
+    return exposeToken ? { ...generic, devToken: token } : generic;
+  }
+
+  /** Completes a reset with the emailed token and a new password. */
+  async resetPassword(token: string, newPassword: string) {
+    if (newPassword.length < 10) {
+      throw new BadRequestException("Password must be at least 10 characters");
+    }
+    const user = await this.prisma.user.findFirst({
+      where: {
+        passwordResetTokenHash: this.hashToken(token),
+        passwordResetExpiresAt: { gt: new Date() },
+      },
+      include: { memberships: true },
+    });
+    if (!user) throw new BadRequestException("Invalid or expired reset token");
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash: await argon2.hash(newPassword),
+        passwordResetTokenHash: null,
+        passwordResetExpiresAt: null,
+      },
+    });
+    await this.audit(user.id, "auth.password_reset");
+    // Sign them straight in after a successful reset.
+    return this.issueTokens(user.id, user.email, user.memberships[0]?.organizationId);
+  }
+
+  private hashToken(token: string) {
+    return createHash("sha256").update(token).digest("hex");
   }
 
   async setupTwoFactor(userId: string) {
